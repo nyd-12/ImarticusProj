@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Portfolio Report</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Portfolio Report</h1>
+    <p><b>Client:</b> {{ report.Client }}</p>
+    <p><b>Date:</b> {{ report.Date }}</p>
+
+    <h2>Holdings</h2>
+    <table>
+        <tr>
+            <th>Security</th>
+            <th>Quantity</th>
+            <th>Buy Value</th>
+            <th>Current Price</th>
+            <th>Current Value</th>
+            <th>Gain/Loss</th>
+            <th>Gain/Loss %</th>
+        </tr>
+        {% for h in report.Holdings %}
+        <tr>
+            <td>{{ h.Security }}</td>
+            <td>{{ h.Quantity }}</td>
+            <td>{{ h.BuyValue }}</td>
+            <td>{{ h.CurrentPrice }}</td>
+            <td>{{ h.CurrentValue }}</td>
+            <td>{{ h["Gain/Loss"] }}</td>
+            <td>{{ h["Gain/Loss %"] }}%</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Cash Balances</h2>
+    <ul>
+        {% for c in report.CashBalances %}
+            <li>{{ c.Currency }}: {{ c.Balance }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Portfolio Summary</h2>
+    <p>Total Buy Value: {{ report.PortfolioSummary.TotalBuyValue }}</p>
+    <p>Total Current Value: {{ report.PortfolioSummary.TotalCurrentValue }}</p>
+    <p>Total Gain/Loss: {{ report.PortfolioSummary["TotalGain/Loss"] }}</p>
+
+    <h2>Risk Measures</h2>
+    <p>Delta: {{ report.RiskMetrics.Delta }}</p>
+    <p>Beta: {{ report.RiskMetrics.Beta }}</p>
+    <p>Sharpe Ratio: {{ report.RiskMetrics["Sharpe Ratio"] }}</p>
+
+    <h2>Benchmarks</h2>
+    <ul>
+        {% for b in report.Benchmarks %}
+            <li>{{ b.Index }}: {{ b.ClosingValue }}</li>
+        {% endfor %}
+    </ul>
+
+    <a href="{{ url_for('home') }}">Back to Clients</a>
+</body>
+</html>

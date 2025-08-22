@@ -1,0 +1,33 @@
+/* static/css/feedback.css */
+#loading {
+    text-align: center;
+    font-style: italic;
+    color: #777;
+    margin: 20px 0;
+}
+
+#error {
+    text-align: center;
+    color: #e74c3c;
+    background-color: #fadbd8;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 20px 0;
+}
+
+#trade-status {
+    text-align: center;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+#trade-status.success {
+    color: #155724;
+    background-color: #d4edda;
+}
+
+#trade-status.error {
+    color: #721c24;
+    background-color: #f8d7da;
+}

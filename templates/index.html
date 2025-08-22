@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Report Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/report.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/feedback.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Portfolio Report Generator 📈</h1>
+
+        <div class="input-section">
+            <div class="form-group">
+                <label for="portfolio-id">Portfolio ID</label>
+                <input type="number" id="portfolio-id" value="1" placeholder="e.g., 1">
+            </div>
+            <div class="form-group">
+                <label for="report-date">Report Date</label>
+                <input type="date" id="report-date">
+            </div>
+            <button id="generate-btn">Generate Report</button>
+        </div>
+
+        <div class="manual-trade-section">
+            <h2>Manually Add a Trade</h2>
+            <form id="add-trade-form" class="input-section">
+                <div class="form-group">
+                    <label for="trade-portfolio-id">Portfolio ID</label>
+                    <input type="number" id="trade-portfolio-id" placeholder="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="trade-security-id">Security ID</label>
+                    <input type="number" id="trade-security-id" placeholder="101" required>
+                </div>
+                <div class="form-group">
+                    <label for="trade-date">Trade Date</label>
+                    <input type="date" id="trade-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="trade-type">Type</label>
+                    <select id="trade-type" required>
+                        <option value="BUY">BUY</option>
+                        <option value="SELL">SELL</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="trade-quantity">Quantity</label>
+                    <input type="number" step="any" id="trade-quantity" placeholder="50" required>
+                </div>
+                <div class="form-group">
+                    <label for="trade-price">Price</label>
+                    <input type="number" step="any" id="trade-price" placeholder="170.50" required>
+                </div>
+                <button type="submit">Add Trade</button>
+            </form>
+            <div id="trade-status" class="hidden"></div>
+        </div>
+
+        <div id="loading" class="hidden">Loading...</div>
+        <div id="error" class="hidden"></div>
+
+        <div id="report-container" class="hidden">
+            <div class="report-summary">
+                <div>Client: <strong id="client-name"></strong></div>
+                <div>Portfolio: <strong id="portfolio-name"></strong></div>
+                <div>Report Date: <strong id="res-report-date"></strong></div>
+                <div>Total Value: <strong id="total-value"></strong> <span id="base-currency"></span></div>
+            </div>
+
+            <h2>Risk Measures</h2>
+            <div class="risk-summary">
+                <div>Portfolio Delta: <strong id="delta"></strong></div>
+                <div>Portfolio Beta: <strong id="beta"></strong></div>
+                <div>Sharpe Ratio: <strong id="sharpe-ratio"></strong></div>
+            </div>
+
+            <h2>Holdings</h2>
+            <table class="holdings-table">
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Quantity</th>
+                        <th>Avg. Buy Price</th>
+                        <th>Current Price</th>
+                        <th>Current Value</th>
+                        <th>Gain/Loss</th>
+                    </tr>
+                </thead>
+                <tbody id="holdings-body">
+                    </tbody>
+            </table>
+
+            <h2>Cash Balances</h2>
+            <table class="cash-table">
+                <thead>
+                    <tr>
+                        <th>Currency</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="cash-body">
+                    </tbody>
+            </table>
+
+            <h2>Benchmark Performance</h2>
+            <div id="benchmark-performance" class="benchmark-summary">
+                <table class="benchmark-table">
+                    <thead>
+                        <tr>
+                            <th>Index</th>
+                            <th>Period</th>
+                            <th>Portfolio Return (%)</th>
+                            <th>Benchmark Return (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="benchmark-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

@@ -86,79 +86,46 @@ def benchmark_performance(portfolio_id: int, portfolio_returns: pd.Series, repor
         "1Y": 365
     }
 
-    # Find the benchmark index from the largest holding (by value)
-    portfolio = Portfolio.query.get(portfolio_id)
-    trades = portfolio.trades if portfolio else []
-    holding_quantities = {}
-    for trade in trades:
-        if trade.trade_date > report_date:
-            continue
-        holding_quantities.setdefault(trade.security_id, 0)
-        if trade.trade_type == 'BUY':
-            holding_quantities[trade.security_id] += trade.quantity
-        elif trade.trade_type == 'SELL':
-            holding_quantities[trade.security_id] -= trade.quantity
-
-    # Get the security with the largest holding
-    main_security = None
-    max_qty = 0
-    for sec_id, qty in holding_quantities.items():
-        if qty > max_qty:
-            main_security = Security.query.get(sec_id)
-            max_qty = qty
-
-    if main_security and main_security.benchmark_index_id:
-        benchmark_index = MarketIndex.query.get(main_security.benchmark_index_id)
-        primary_benchmark_id = main_security.benchmark_index_id
-    else:
-        # fallback to NASDAQ Composite (id=1)
-        benchmark_index = MarketIndex.query.get(1)
-        primary_benchmark_id = 1
-
+    # Find all market indices
+    all_indices = MarketIndex.query.all()
     results = []
-    for period_name, days in periods.items():
-        start_date = report_date - timedelta(days=days)
-        # Portfolio returns for this period
-        port_returns_period = portfolio_returns[portfolio_returns.index >= pd.to_datetime(start_date)] if not portfolio_returns.empty else pd.Series(dtype=float)
+    for index in all_indices:
+        for period_name, days in periods.items():
+            start_date = report_date - timedelta(days=days)
+            # Portfolio returns for this period
+            port_returns_period = portfolio_returns[portfolio_returns.index >= pd.to_datetime(start_date)] if not portfolio_returns.empty else pd.Series(dtype=float)
 
-        index_prices = IndexPrice.query.filter(
-            IndexPrice.index_id == primary_benchmark_id,
-            IndexPrice.price_date.between(start_date, report_date)
-        ).order_by(IndexPrice.price_date).all()
+            if port_returns_period.empty:
+                portfolio_return_pct = "N/A"
+            else:
+                portfolio_total_return = (1 + port_returns_period).prod() - 1
+                portfolio_return_pct = round(portfolio_total_return * 100, 2)
 
-        if not index_prices:
+            index_prices = IndexPrice.query.filter(
+                IndexPrice.index_id == index.id,
+                IndexPrice.price_date.between(start_date, report_date)
+            ).order_by(IndexPrice.price_date).all()
+
+            if not index_prices:
+                benchmark_return_pct = "N/A"
+            else:
+                index_df = pd.DataFrame([(p.price_date, p.closing_value) for p in index_prices],
+                                        columns=['date', 'value']).set_index('date')
+                index_returns = index_df['value'].pct_change()
+                index_returns.replace([np.inf, -np.inf], np.nan, inplace=True)
+                index_returns.dropna(inplace=True)
+                if index_returns.empty:
+                    benchmark_return_pct = "N/A"
+                else:
+                    benchmark_total_return = (1 + index_returns).prod() - 1
+                    benchmark_return_pct = round(benchmark_total_return * 100, 2)
+
             results.append({
-                "vs_index": benchmark_index.name if benchmark_index else "Benchmark",
+                "vs_index": index.name if index else "Benchmark",
                 "period": period_name,
-                "portfolio_return_pct": 0,
-                "benchmark_return_pct": 0
+                "portfolio_return_pct": portfolio_return_pct,
+                "benchmark_return_pct": benchmark_return_pct
             })
-            continue
-
-        index_df = pd.DataFrame([(p.price_date, p.closing_value) for p in index_prices],
-                                columns=['date', 'value']).set_index('date')
-        index_returns = index_df['value'].pct_change()
-        index_returns.replace([np.inf, -np.inf], np.nan, inplace=True)
-        index_returns.dropna(inplace=True)
-
-        if port_returns_period.empty or index_returns.empty:
-            results.append({
-                "vs_index": benchmark_index.name if benchmark_index else "Benchmark",
-                "period": period_name,
-                "portfolio_return_pct": 0,
-                "benchmark_return_pct": 0
-            })
-            continue
-
-        portfolio_total_return = (1 + port_returns_period).prod() - 1
-        benchmark_total_return = (1 + index_returns).prod() - 1
-
-        results.append({
-            "vs_index": benchmark_index.name if benchmark_index else "Benchmark",
-            "period": period_name,
-            "portfolio_return_pct": round(portfolio_total_return * 100, 2),
-            "benchmark_return_pct": round(benchmark_total_return * 100, 2)
-        })
 
     return results
 

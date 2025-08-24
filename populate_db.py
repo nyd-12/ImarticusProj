@@ -10,7 +10,7 @@ from models import Client, Portfolio, Security, Trade, CashBalance, MarketIndex,
 fake = Faker()
 
 # --- Configuration ---
-NUM_CLIENTS = 6
+NUM_CLIENTS = 10
 PRICE_HISTORY_DAYS = 365  # Generate one year of historical prices
 
 
@@ -33,20 +33,24 @@ def create_master_data():
     indices = [
         MarketIndex(id=1, name='NASDAQ Composite', ticker='^IXIC'),
         MarketIndex(id=2, name='FTSE 100', ticker='^FTSE'),
-        MarketIndex(id=3, name='S&P 500', ticker='^GSPC')
+        MarketIndex(id=3, name='S&P 500', ticker='^GSPC'),
+        MarketIndex(id=4, name='NIFTY 50', ticker='^NSEI'),
+        MarketIndex(id=5, name='DAX', ticker='^GDAXI')
     ]
     db.session.add_all(indices)
 
-    # Create Securities
+    # Create Securities (mix of US, UK, India, Germany)
     securities = [
-        Security(id=101, ticker='AAPL', name='Apple Inc.', security_type='Stock', currency='USD', exchange='NASDAQ',
-                 beta=1.29, benchmark_index_id=1),
-        Security(id=102, ticker='GOOGL', name='Alphabet Inc.', security_type='Stock', currency='USD', exchange='NASDAQ',
-                 beta=1.05, benchmark_index_id=1),
-        Security(id=103, ticker='MSFT', name='Microsoft Corporation', security_type='Stock', currency='USD',
-                 exchange='NASDAQ', beta=0.92, benchmark_index_id=3),
-        Security(id=104, ticker='HSBC', name='HSBC Holdings PLC', security_type='Stock', currency='GBP', exchange='LSE',
-                 beta=0.85, benchmark_index_id=2)
+        Security(id=101, ticker='AAPL', name='Apple Inc.', security_type='Stock', currency='USD', exchange='NASDAQ', beta=1.29, benchmark_index_id=1),
+        Security(id=102, ticker='GOOGL', name='Alphabet Inc.', security_type='Stock', currency='USD', exchange='NASDAQ', beta=1.05, benchmark_index_id=1),
+        Security(id=103, ticker='MSFT', name='Microsoft Corporation', security_type='Stock', currency='USD', exchange='NASDAQ', beta=0.92, benchmark_index_id=3),
+        Security(id=104, ticker='HSBC', name='HSBC Holdings PLC', security_type='Stock', currency='GBP', exchange='LSE', beta=0.85, benchmark_index_id=2),
+        Security(id=105, ticker='INFY', name='Infosys Ltd', security_type='Stock', currency='INR', exchange='NSE', beta=0.95, benchmark_index_id=4),
+        Security(id=106, ticker='TCS', name='Tata Consultancy Services', security_type='Stock', currency='INR', exchange='NSE', beta=0.88, benchmark_index_id=4),
+        Security(id=107, ticker='SAP', name='SAP SE', security_type='Stock', currency='EUR', exchange='XETRA', beta=1.10, benchmark_index_id=5),
+        Security(id=108, ticker='SIE', name='Siemens AG', security_type='Stock', currency='EUR', exchange='XETRA', beta=1.02, benchmark_index_id=5),
+        Security(id=109, ticker='BARC', name='Barclays PLC', security_type='Stock', currency='GBP', exchange='LSE', beta=1.20, benchmark_index_id=2),
+        Security(id=110, ticker='AMZN', name='Amazon.com Inc.', security_type='Stock', currency='USD', exchange='NASDAQ', beta=1.30, benchmark_index_id=1)
     ]
     db.session.add_all(securities)
     db.session.commit()
@@ -130,32 +134,61 @@ def create_cash_balances():
 
 
 def create_holdings():
-    """Creates random holdings (via trades) for each portfolio."""
+    """Creates realistic holdings (via trades) for each portfolio, ensuring active holdings and price data."""
     print("Creating holdings via back-dated trades...")
     portfolios = Portfolio.query.all()
     trades_to_add = []
-    security_ids = [s.id for s in Security.query.all()]
+    securities = Security.query.all()
     today = datetime.utcnow().date()
 
     for portfolio in portfolios:
-        for security_id in random.sample(security_ids, k=random.randint(3, 4)):
-            trade_date = today - timedelta(days=random.randint(30, 360))
-            # Find a realistic price for the trade date
-            price_on_date = DailyPrice.query.filter(
-                DailyPrice.security_id == security_id,
-                DailyPrice.price_date <= trade_date
+        # Each client holds 4-5 securities, from different exchanges
+        selected_securities = random.sample(securities, k=random.randint(4, 5))
+        for security in selected_securities:
+            # Buy at a random date in the past year (between 180 and 360 days ago for realism)
+            buy_days_ago = random.randint(180, 360)
+            buy_date = today - timedelta(days=buy_days_ago)
+            price_on_buy = DailyPrice.query.filter(
+                DailyPrice.security_id == security.id,
+                DailyPrice.price_date <= buy_date
             ).order_by(DailyPrice.price_date.desc()).first()
 
-            if price_on_date:
+            if price_on_buy:
+                quantity = round(random.uniform(10, 100), 2)
+                price_per_unit = round(price_on_buy.closing_price * random.uniform(0.98, 1.02), 2)
+                # Buy trade
                 trade = Trade(
                     portfolio_id=portfolio.id,
-                    security_id=security_id,
-                    trade_date=trade_date,
+                    security_id=security.id,
+                    trade_date=buy_date,
                     trade_type='BUY',
-                    quantity=round(random.uniform(10, 200), 2),
-                    price_per_unit=round(price_on_date.closing_price * random.uniform(0.98, 1.02), 2)
+                    quantity=quantity,
+                    price_per_unit=price_per_unit
                 )
                 trades_to_add.append(trade)
+
+                # Optionally, add a SELL trade for some securities to simulate activity
+                if random.random() < 0.5:
+                    # Sell between 30 and 120 days ago, but after buy date
+                    sell_days_ago = random.randint(30, min(120, buy_days_ago - 1))
+                    sell_date = today - timedelta(days=sell_days_ago)
+                    if sell_date > buy_date:
+                        price_on_sell = DailyPrice.query.filter(
+                            DailyPrice.security_id == security.id,
+                            DailyPrice.price_date <= sell_date
+                        ).order_by(DailyPrice.price_date.desc()).first()
+                        if price_on_sell:
+                            sell_quantity = round(quantity * random.uniform(0.3, 0.8), 2)
+                            sell_price_per_unit = round(price_on_sell.closing_price * random.uniform(0.98, 1.02), 2)
+                            sell_trade = Trade(
+                                portfolio_id=portfolio.id,
+                                security_id=security.id,
+                                trade_date=sell_date,
+                                trade_type='SELL',
+                                quantity=sell_quantity,
+                                price_per_unit=sell_price_per_unit
+                            )
+                            trades_to_add.append(sell_trade)
     db.session.add_all(trades_to_add)
     db.session.commit()
 

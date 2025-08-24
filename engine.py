@@ -130,6 +130,27 @@ def benchmark_performance(portfolio_id: int, portfolio_returns: pd.Series, repor
     return results
 
 
+def calculate_portfolio_delta(holdings_list, total_portfolio_value):
+    """
+    Calculates the portfolio's delta, defined as the sensitivity of the
+    total portfolio value to changes in its underlying equity prices.
+    
+    This is calculated as the ratio of the total value of stock holdings to the
+    total portfolio value (including cash). For a portfolio of only stocks,
+    the delta is 1. For a portfolio of 50% stocks and 50% cash, the
+    delta is 0.5.
+    """
+    if not total_portfolio_value or total_portfolio_value == 0:
+        return 0
+    
+    # Sum the current value of all equity holdings
+    total_equity_value = sum(h['current_value'] for h in holdings_list)
+    
+    # Delta is the proportion of the portfolio that is in equities
+    portfolio_delta = total_equity_value / total_portfolio_value
+    
+    return portfolio_delta
+
 # ===================================================================
 #  MAIN ENGINE FUNCTION (DEFINED LAST)
 # ===================================================================
@@ -202,7 +223,8 @@ def generate_portfolio_statement(portfolio_id: int, report_date: date):
         for holding in holdings_list:
             weight = holding['current_value'] / total_portfolio_value
             portfolio_beta += weight * holding['beta']
-            portfolio_delta += holding['quantity']  # Delta as total shares held (simple sum)
+        # Use new delta calculation
+        portfolio_delta = calculate_portfolio_delta(holdings_list, total_portfolio_value)
     else:
         portfolio_beta = 0
         portfolio_delta = 0
@@ -219,7 +241,7 @@ def generate_portfolio_statement(portfolio_id: int, report_date: date):
         "risk_measures": {
             "beta": round(portfolio_beta, 2) if holdings_list else "N/A",
             "sharpe_ratio": round(sharpe_ratio, 2) if sharpe_ratio is not None and holdings_list else "N/A",
-            "delta": round(portfolio_delta, 2) if holdings_list else 0
+            "delta": round(portfolio_delta, 4) if holdings_list else 0  # More precision for delta
         },
         "performance_benchmarks": benchmarks if benchmarks else [
             {"vs_index": "N/A", "period": p, "portfolio_return_pct": "N/A", "benchmark_return_pct": "N/A"} for p in ["1M", "3M", "6M", "1Y"]

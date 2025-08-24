@@ -154,7 +154,7 @@ def create_holdings():
             ).order_by(DailyPrice.price_date.desc()).first()
 
             if price_on_buy:
-                quantity = round(random.uniform(10, 100), 2)
+                quantity = int(random.uniform(10, 100))  # Ensure whole number of shares
                 price_per_unit = round(price_on_buy.closing_price * random.uniform(0.98, 1.02), 2)
                 # Buy trade
                 trade = Trade(
@@ -178,7 +178,7 @@ def create_holdings():
                             DailyPrice.price_date <= sell_date
                         ).order_by(DailyPrice.price_date.desc()).first()
                         if price_on_sell:
-                            sell_quantity = round(quantity * random.uniform(0.3, 0.8), 2)
+                            sell_quantity = int(quantity * random.uniform(0.3, 0.8))  # Ensure whole number
                             sell_price_per_unit = round(price_on_sell.closing_price * random.uniform(0.98, 1.02), 2)
                             sell_trade = Trade(
                                 portfolio_id=portfolio.id,

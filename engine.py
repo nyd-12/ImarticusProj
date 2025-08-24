@@ -45,7 +45,8 @@ def calculate_historical_portfolio_value(portfolio_id: int, report_date: date):
                             columns=['date', 'ticker', 'price']).pivot(index='date', columns='ticker', values='price')
 
     # Define the full date range for alignment
-    date_range = pd.date_range(start=start_date, end=report_date, freq='D')
+    date_range = pd.date_range(start=start_date, end=report_date, freq='D') # basically add rows to the missing 
+    #fields in the panda series
     
     # Reindex the price_df to match the full date_range and forward-fill missing values.
     # This ensures that if a price for report_date is missing, the last known price is used.

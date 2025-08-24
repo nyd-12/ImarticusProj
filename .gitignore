@@ -88,3 +88,4 @@ Thumbs.db
 # Ignore environment variables
 .env
 .env.*
+anotherFlowchart.png

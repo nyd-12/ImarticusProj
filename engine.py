@@ -43,9 +43,14 @@ def calculate_historical_portfolio_value(portfolio_id: int, report_date: date):
 
     price_df = pd.DataFrame([(p.price_date, p.security.ticker, p.closing_price) for p in prices],
                             columns=['date', 'ticker', 'price']).pivot(index='date', columns='ticker', values='price')
-    price_df.ffill(inplace=True)
 
+    # Define the full date range for alignment
     date_range = pd.date_range(start=start_date, end=report_date, freq='D')
+    
+    # Reindex the price_df to match the full date_range and forward-fill missing values.
+    # This ensures that if a price for report_date is missing, the last known price is used.
+    price_df = price_df.reindex(date_range).ffill()
+
     holdings_df = pd.DataFrame(index=date_range, columns=price_df.columns).fillna(0)
 
     for trade in trades:
@@ -56,6 +61,7 @@ def calculate_historical_portfolio_value(portfolio_id: int, report_date: date):
             elif trade.trade_type == 'SELL':
                 holdings_df.loc[trade_date:, trade.security.ticker] -= trade.quantity
 
+    # Now that price_df is aligned, this calculation will be correct
     daily_values = holdings_df.mul(price_df).sum(axis=1)
     daily_returns = daily_values.pct_change()
 
